@@ -5,6 +5,8 @@ from selenium.webdriver.common.by import By
 import undetected_chromedriver as uc
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.common.action_chains import ActionChains
+import pyperclip
 import time
 options = webdriver.ChromeOptions()
 service = ChromeService(executable_path="D:\Github\CharacterConvo\chromedriverMOD.exe")
@@ -33,20 +35,15 @@ def delay():
 class Conversation:  # this class is the conversation itself
     def __init__(self, search_name):  # name is the name of the character
         self.search_name = str(search_name)
-        print("*INITIALIZING " + str(search_name))
+        self.responses = ["INITIAL"]
+        print("*INITIALIZING* " + str(search_name))
 
         browser.get("https://beta.character.ai/search?")  # open the character.ai search bar
 
-        # there may be popups, eliminate them
-        wait.until(EC.presence_of_element_located((By.XPATH, '//div[contains(@tabindex, "-1")]')))
-        delay()
-        # Find the SVG element within the modal dialog
-        popup = browser.find_element(By.XPATH, '//svg[contains(@stroke, "currentColor")]')
-        print(popup)
-        action = ActionChains(browser)
-        action.move_to_element_with_offset(popup, 5, 5)
-        action.click()  # X the popup
-        action.perform()
+        # there may be popups, eliminate them manually
+        print("#STOPPED, REMOVE POPUPS#")
+        input(">INPUT ANYTHING ONCE FINISHED: ")
+        print("#RESUMING#")
 
         wait.until(EC.presence_of_element_located((By.XPATH, '//input[contains(@id, "search-input")]')))
         search_bar = browser.find_element(By.XPATH, '//input[contains(@id, "search-input")]')
@@ -68,12 +65,46 @@ class Conversation:  # this class is the conversation itself
 
         # WE ARE NOW AT THE CHARACTER CHAT PAGE
         delay()
-        print("*INITIALIZED " + self.name)
+        print("*INITIALIZED " + self.name + " *")
+
+    def send(self, message):
+        input_bar = browser.find_element(By.XPATH, '//textarea[contains(@id, "user-input")]')
+        action = ActionChains(browser)
+        action.click(on_element=input_bar)  # click on user input
+        action.perform()
+        action.send_keys(message)  # search the name of the character
+        action.send_keys(u'\ue007')  # press enter
+        action.perform()
+
+    def receive(self):
+        hover_zones = browser.find_elements(By.XPATH, '//div[contains(@class, "msg-row msg-row-light-bg")]')
+        action = ActionChains(browser)
+        action.move_to_element(hover_zones[len(hover_zones)-1])  # hover over last text box
+        action.perform()
+        # a clipboard copy button might appear
+        for i in range(100):
+            try:
+                buttons = browser.find_elements(By.XPATH, '//button[contains(@aria-label, "Copy to Clipboard")]')
+                if len(buttons) > len(self.responses):  # this indicates a change
+                    action = ActionChains(browser)
+                    action.click(on_element=buttons[len(buttons) - 1])
+                    action.perform()  # if this works, response will be in clipboard
+                    break  # if it works we go to next stage
+            except:
+                pass
+            delay()
+
+        # data is in the clipboard, unload it into self.responses
+        self.responses.append(str(pyperclip.paste()))
+        print(self.name + ": " + self.responses[len(self.responses) - 1])
+        return str(pyperclip.paste())  # why not return?
 
 
 def menu():  # this is just for input
     search_name = str(input(">INPUT THE NAME OF THE CHARACTER YOU WISH TO SPEAK TO: "))
     conversations.append(Conversation(search_name))
+    conversations[0].send("hello")
+    print()
     time.sleep(100)
 
 
