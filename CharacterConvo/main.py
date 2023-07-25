@@ -75,24 +75,26 @@ class Conversation:  # this class is the conversation itself
         action.send_keys(message)  # search the name of the character
         action.send_keys(u'\ue007')  # press enter
         action.perform()
+        time.sleep(1)
 
     def receive(self):
-        hover_zones = browser.find_elements(By.XPATH, '//div[contains(@class, "msg-row msg-row-light-bg")]')
-        action = ActionChains(browser)
-        action.move_to_element(hover_zones[len(hover_zones)-1])  # hover over last text box
-        action.perform()
+
         # a clipboard copy button might appear
         for i in range(100):
             try:
-                buttons = browser.find_elements(By.XPATH, '//button[contains(@aria-label, "Copy to Clipboard")]')
-                if len(buttons) > len(self.responses):  # this indicates a change
+                hover_zones = browser.find_elements(By.XPATH, '//div[contains(@class, "msg-row msg-row-light-bg")]')
+                if len(hover_zones) > len(self.responses):  # this indicates a change
                     action = ActionChains(browser)
-                    action.click(on_element=buttons[len(buttons) - 1])
+                    action.move_to_element(hover_zones[len(hover_zones) - 1])  # hover over last text box
+                    action.perform()
+                    button = browser.find_element(By.XPATH, '//button[contains(@aria-label, "Copy to Clipboard")]')
+                    action = ActionChains(browser)
+                    action.click(on_element=button)
                     action.perform()  # if this works, response will be in clipboard
                     break  # if it works we go to next stage
             except:
                 pass
-            delay()
+            time.sleep(1)
 
         # data is in the clipboard, unload it into self.responses
         self.responses.append(str(pyperclip.paste()))
@@ -100,12 +102,35 @@ class Conversation:  # this class is the conversation itself
         return str(pyperclip.paste())  # why not return?
 
 
+def instructions():
+    # instructions
+    print("*******INSTRUCTIONS***********")
+    print('input "esc" to end the program, conversations will be lost')
+    print('input "instructions" or "ins" to receive the instructions')
+    print("******************")
+
+
+def check(text):
+    if text == "esc":
+        exit()
+    if text == "instructions" or text == "ins":
+        instructions()
+        return ""
+    else:
+        return text
+
+
 def menu():  # this is just for input
-    search_name = str(input(">INPUT THE NAME OF THE CHARACTER YOU WISH TO SPEAK TO: "))
+    print("Talk to a character from Character.AI using Python!")
+    print("by Muk Chunpongtong. Uses Selenium Webdriver")
+    instructions()
+    search_name = check(str(input(">INPUT THE NAME OF THE CHARACTER YOU WISH TO SPEAK TO: ")))
     conversations.append(Conversation(search_name))
-    conversations[0].send("hello")
-    print()
-    time.sleep(100)
+    while True:
+        text = check(str(input("To " + conversations[0].name + ":")))
+        if text != "":
+            conversations[0].send(text)
+        conversations[0].receive()
 
 
 menu()
